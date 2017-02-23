@@ -8,7 +8,6 @@ import {
   ensureState,
   preloadState
 } from '../src/index';
-import {Map, List, is} from 'immutable';
 import {createStore, combineReducers} from 'redux';
 
 const counterReducer = (state = 0, action) => {
@@ -22,7 +21,7 @@ const counterReducer = (state = 0, action) => {
   }
 };
 const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action)});
-const rootReducerImmutable = (state = Map(), action) => Map({counter: counterReducer(state.get('counter'), action)});
+// const rootReducerImmutable = (state = {}, action) => ({counter: counterReducer(state.counter, action)});
 const enhancedRootReducerNested = combineReducers({
   counter1: combineReducers({ counter: optimistic(counterReducer) }),
   counter2: combineReducers({ counter: optimistic(counterReducer) })
@@ -36,68 +35,68 @@ test('test rootReducer works OK', t => {
   t.deepEqual(actual, expected)
 });
 
-test('test rootReducerImmutable works OK', t => {
-  const actual = rootReducerImmutable(undefined, {});
-  const expected = Map({counter: 0});
-  t.true(is(actual, expected))
-});
+// test('test rootReducerImmutable works OK', t => {
+//   const actual = rootReducerImmutable(undefined, {});
+//   const expected = Map({counter: 0});
+//   t.true(is(actual, expected))
+// });
 
 test('test enhancedRootReducerNested works OK', t => {
   const actual = enhancedRootReducerNested(undefined, {});
-  const expected = Map({
+  const expected = {
       beforeState: undefined,
-      history: List(),
+      history: [],
       current: 0
-  })
-  t.deepEqual(actual.counter1.counter.toJS(), expected.toJS())
-  t.deepEqual(actual.counter2.counter.toJS(), expected.toJS())
+  }
+  t.deepEqual(actual.counter1.counter, expected)
+  t.deepEqual(actual.counter2.counter, expected)
 })
 
 /*BASIC*/
 test('wraps a reducer', t => {
   const enhancedReducer = optimistic(rootReducer);
   const actual = enhancedReducer(undefined, {});
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('wraps a reducer with existing state', t => {
   const enhancedReducer = optimistic(rootReducer);
   const actual = enhancedReducer({counter: 5}, {});
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 5}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
-test('wraps an immutable reducer', t => {
-  const enhancedReducer = optimistic(rootReducerImmutable);
-  const actual = enhancedReducer(undefined, {});
-  const expected = Map({
-    beforeState: undefined,
-    history: List(),
-    current: Map({counter: 0})
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
-});
+// test('wraps an immutable reducer', t => {
+//   const enhancedReducer = optimistic(rootReducerImmutable);
+//   const actual = enhancedReducer(undefined, {});
+//   const expected = {
+//     beforeState: undefined,
+//     history: [],
+//     current: {counter: 0}
+//   };
+//   t.deepEqual(actual, expected);
+// });
 
 /*BEGIN*/
 test('begin a transaction', t => {
   const enhancedReducer = optimistic(rootReducer);
   const action = makeAction('INC', BEGIN, 0);
   const actual = enhancedReducer(undefined, action);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(action),
+    history: [action],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin a second transaction', t => {
@@ -106,12 +105,12 @@ test('begin a second transaction', t => {
   const begin1 = makeAction('INC', BEGIN, 1);
   const state1 = enhancedReducer(undefined, begin0);
   const actual = enhancedReducer(state1, begin1);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin0, begin1),
+    history: [begin0, begin1],
     current: {counter: 2}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin a transaction, add a non-opt', t => {
@@ -120,12 +119,12 @@ test('begin a transaction, add a non-opt', t => {
   const nonOpt0 = {type: 'DEC'};
   const state1 = enhancedReducer(undefined, begin0);
   const actual = enhancedReducer(state1, nonOpt0);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin0, nonOpt0),
+    history: [begin0, nonOpt0],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, add non-opt', t => {
@@ -136,12 +135,12 @@ test('begin 2, add non-opt', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, nonOpt0);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin0, begin1, nonOpt0),
+    history: [begin0, begin1, nonOpt0],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 
@@ -152,12 +151,12 @@ test('immediately commit a transaction', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const commit0 = makeAction('--', COMMIT, 0);
   const actual = enhancedReducer(state1, commit0);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, commit the first', t => {
@@ -168,12 +167,12 @@ test('begin 2, commit the first', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, commit0);
-  const expected = Map({
-    beforeState: state1.get('current'),
-    history: List.of(begin1, commit0),
+  const expected = {
+    beforeState: state1.current,
+    history: [begin1, commit0],
     current: {counter: 2}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, add non-opt action, commit the first', t => {
@@ -186,12 +185,12 @@ test('begin 2, add non-opt action, commit the first', t => {
   const state2 = enhancedReducer(state1, begin1);
   const state3 = enhancedReducer(state2, nonOpt0);
   const actual = enhancedReducer(state3, commit0);
-  const expected = Map({
-    beforeState: state1.get('current'),
-    history: List.of(begin1, nonOpt0, commit0),
+  const expected = {
+    beforeState: state1.current,
+    history: [begin1, nonOpt0, commit0],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 /*REVERT*/
@@ -201,12 +200,12 @@ test('immediately revert a transaction', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const revertAction = makeAction('--', REVERT, 0);
   const actual = enhancedReducer(state1, revertAction);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, revert the second', t => {
@@ -217,12 +216,12 @@ test('begin 2, revert the second', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, revert0);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin0, revert0),
+    history: [begin0, revert0],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, revert the first', t => {
@@ -233,12 +232,12 @@ test('begin 2, revert the first', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, revert0);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin1, revert0),
+    history: [begin1, revert0],
     current: {counter: 1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, revert the first, then the second', t => {
@@ -251,12 +250,12 @@ test('begin 2, revert the first, then the second', t => {
   const state2 = enhancedReducer(state1, begin1);
   const state3 = enhancedReducer(state2, revert0);
   const actual = enhancedReducer(state3, secondRevert);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 1, add non-opt, revert it', t => {
@@ -267,12 +266,12 @@ test('begin 1, add non-opt, revert it', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, nonOpt0);
   const actual = enhancedReducer(state2, revert0);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: -1}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 1 with nested combineReducers, revert', t => {
@@ -280,13 +279,13 @@ test('begin 1 with nested combineReducers, revert', t => {
   const revert = makeAction('--', REVERT, 0);
   const state = enhancedRootReducerNested(undefined, begin);
   const actual = enhancedRootReducerNested(state, revert);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: 0
-  });
-  t.deepEqual(actual.counter1.counter.toJS(), expected.toJS());
-  t.deepEqual(actual.counter2.counter.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual.counter1.counter, expected);
+  t.deepEqual(actual.counter2.counter, expected);
 });
 
 test('begin 2, add non-opt, revert first', t => {
@@ -299,12 +298,12 @@ test('begin 2, add non-opt, revert first', t => {
   const state2 = enhancedReducer(state1, begin1);
   const state3 = enhancedReducer(state2, nonOpt0);
   const actual = enhancedReducer(state3, revert0);
-  const expected = Map({
+  const expected = {
     beforeState: {counter: 0},
-    history: List.of(begin1,nonOpt0, revert0),
+    history: [begin1,nonOpt0, revert0],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('begin 2, add non-opt, revert the first, commit the second', t => {
@@ -319,12 +318,12 @@ test('begin 2, add non-opt, revert the first, commit the second', t => {
   const state3 = enhancedReducer(state2, nonOpt0);
   const fourthState = enhancedReducer(state3, revert0);
   const actual = enhancedReducer(fourthState, commit0);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: 0}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('revert and commit have an extra DEC', t => {
@@ -339,12 +338,12 @@ test('revert and commit have an extra DEC', t => {
   const state3 = enhancedReducer(state2, nonOpt0);
   const fourthState = enhancedReducer(state3, revert0);
   const actual = enhancedReducer(fourthState, commit0);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: -2}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('real world', t => {
@@ -367,12 +366,12 @@ test('real world', t => {
   const state7 = enhancedReducer(state6, commit0);
   const state8 = enhancedReducer(state7, nonOpt2);
   const actual = enhancedReducer(state8, revert2);
-  const expected = Map({
+  const expected = {
     beforeState: undefined,
-    history: List(),
+    history: [],
     current: {counter: -2}
-  });
-  t.deepEqual(actual.toJS(), expected.toJS());
+  };
+  t.deepEqual(actual, expected);
 });
 
 test('with redux', t => {
